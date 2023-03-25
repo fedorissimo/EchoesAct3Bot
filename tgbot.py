@@ -1,7 +1,8 @@
 # Импортируем необходимые классы.
 import logging
 import datetime
-from telegram.ext import Application, MessageHandler, filters, CommandHandler
+from telegram.ext import Application, MessageHandler, filters, CommandHandler, CallbackContext
+import telegram
 
 
 # Запускаем логгирование
@@ -21,7 +22,8 @@ async def echo(update, context):
     # У message есть поле text, содержащее текст полученного сообщения,
     # а также метод reply_text(str),
     # отсылающий ответ пользователю, от которого получено сообщение.
-    await update.message.reply_text('Я получил сообщение ' + update.message.text)
+    if 'эхо' in update.message.text:
+        await update.message.reply_text('Я получил сообщение ' + update.message.text[4:])
 
 
 # Напишем соответствующие функции.
