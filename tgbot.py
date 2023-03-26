@@ -54,9 +54,15 @@ async def printtime(update, context):
     await update.message.reply_text(str(dt_now))
 
 
-async def stand(update, context):
-    """Ничего не делает"""
-    pass
+async def stands(update, context):
+    """Выводит список пользователей и их стендов"""
+    standlist = ''
+    with open('stands.csv', 'r') as f:
+        csv_read = csv.reader(f, delimiter=',', lineterminator="\n")
+        for i in csv_read:
+            standlist += ' - '.join(i[1:3])
+            standlist += '\n'
+    await update.message.reply_text(standlist)
 
 
 async def mystand(update, context):
@@ -95,6 +101,7 @@ def main():
     application.add_handler(CommandHandler("date", printdate))
     application.add_handler(CommandHandler("time", printtime))
     application.add_handler(CommandHandler("mystand", mystand))
+    application.add_handler(CommandHandler("stands", stands))
     # application.add_handler(CommandHandler("new_member", set_welcome))
     # Регистрируем обработчик в приложении.
     application.add_handler(text_handler)
