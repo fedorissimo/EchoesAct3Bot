@@ -3,14 +3,15 @@ import logging
 import datetime
 from telegram.ext import Application, MessageHandler, filters, CommandHandler, CallbackContext
 import telegram
+import csv
 
 
 # Запускаем логгирование
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
-)
-
-logger = logging.getLogger(__name__)
+# logging.basicConfig(
+#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
+# )
+#
+# logger = logging.getLogger(__name__)
 dt_now = datetime.datetime.now()
 
 
@@ -53,10 +54,31 @@ async def printtime(update, context):
     await update.message.reply_text(str(dt_now))
 
 
+async def stand(update, context):
+    """Ничего не делает"""
+    pass
+
+
+async def mystand(update, context):
+    """Позволяет выбрать стенд"""
+    msg = update.message.text
+    newstand = msg[9:]
+    with open('stands.csv', 'r') as f:
+        csv_read = csv.reader(f, delimiter=',', lineterminator="\n")
+        if newstand not in csv_read and update.message.from_user.id not in csv_read:
+            with open('stands.csv', 'a') as fw:
+                csv_write = csv.writer(fw, delimiter=',', lineterminator="\n")
+
+                csv_write.writerow([update.message.from_user.id, update.message.from_user.first_name, newstand])
+
+    print(msg)
+    await update.message.reply_text(f'Твой стенд - {msg[9:]}')
+
+
 def main():
     # Создаём объект Application.
     # Вместо слова "TOKEN" надо разместить полученный от @BotFather токен
-    application = Application.builder().token('5896234992:AAE_TiFFUIV0HUouxrLxaPLfJo8EWxDYZEQ').build()
+    application = Application.builder().token('Тут должен быть токен').build()
 
     # Создаём обработчик сообщений типа filters.TEXT
     # из описанной выше асинхронной функции echo()
@@ -72,6 +94,8 @@ def main():
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("date", printdate))
     application.add_handler(CommandHandler("time", printtime))
+    application.add_handler(CommandHandler("mystand", mystand))
+    # application.add_handler(CommandHandler("new_member", set_welcome))
     # Регистрируем обработчик в приложении.
     application.add_handler(text_handler)
 
