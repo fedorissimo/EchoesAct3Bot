@@ -5,6 +5,7 @@ from telegram.ext import Application, MessageHandler, filters, CommandHandler, C
 import telegram
 import csv
 import sqlite3
+from random import randint
 
 
 # Запускаем логгирование
@@ -27,6 +28,13 @@ async def echo(update, context):
     # У message есть поле text, содержащее текст полученного сообщения,
     # а также метод reply_text(str),
     # отсылающий ответ пользователю, от которого получено сообщение.
+    conn = sqlite3.connect('tgusers.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM test WHERE user_name = "Test"')
+    users = cursor.fetchall()[0][-1]
+    print(users)
+    cursor.execute('UPDATE INTO test SET (messages) WHERE user_name="Test" INSERT (?)', users)
+    conn.commit()
     if 'эхо' in update.message.text:
         await update.message.reply_text('Я получил сообщение ' + update.message.text[4:])
 
