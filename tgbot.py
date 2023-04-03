@@ -28,13 +28,18 @@ async def echo(update, context):
     # У message есть поле text, содержащее текст полученного сообщения,
     # а также метод reply_text(str),
     # отсылающий ответ пользователю, от которого получено сообщение.
-    # conn = sqlite3.connect('tgusers.db')
-    # cursor = conn.cursor()
-    # cursor.execute('SELECT * FROM test WHERE user_name = "Test"')
-    # users = cursor.fetchall()[0][-1]
-    # print(users)
-    # cursor.execute('UPDATE INTO test SET (messages) WHERE user_name="Test" INSERT (?)', users)
-    # conn.commit()
+    conn = sqlite3.connect('tgusers.db')
+    cursor = conn.cursor()
+    user = update.message.from_user.id
+    cursor.execute('SELECT * FROM test WHERE user_id = (?)', (user, ))
+    messagenum = cursor.fetchall()[0][-1]
+    print(messagenum)
+    print(user)
+    print(type(user))
+    usertext = str(user)
+    cursor.execute('UPDATE test SET messages = (?) WHERE user_id=(?)', (str(int(messagenum) + 1), usertext, ))
+    print(messagenum + 1)
+    conn.commit()
     if 'эхо' in update.message.text:
         await update.message.reply_text('Я получил сообщение ' + update.message.text[4:])
 
