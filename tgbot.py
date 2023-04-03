@@ -28,13 +28,13 @@ async def echo(update, context):
     # У message есть поле text, содержащее текст полученного сообщения,
     # а также метод reply_text(str),
     # отсылающий ответ пользователю, от которого получено сообщение.
-    conn = sqlite3.connect('tgusers.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM test WHERE user_name = "Test"')
-    users = cursor.fetchall()[0][-1]
-    print(users)
-    cursor.execute('UPDATE INTO test SET (messages) WHERE user_name="Test" INSERT (?)', users)
-    conn.commit()
+    # conn = sqlite3.connect('tgusers.db')
+    # cursor = conn.cursor()
+    # cursor.execute('SELECT * FROM test WHERE user_name = "Test"')
+    # users = cursor.fetchall()[0][-1]
+    # print(users)
+    # cursor.execute('UPDATE INTO test SET (messages) WHERE user_name="Test" INSERT (?)', users)
+    # conn.commit()
     if 'эхо' in update.message.text:
         await update.message.reply_text('Я получил сообщение ' + update.message.text[4:])
 
@@ -109,9 +109,17 @@ async def mystand(update, context):
 
 
 async def stats(update, context):
-    """Отправляет сообщение когда получена команда /time"""
+    """Будет выводить статистику"""
     dt_now = datetime.datetime.now().time()
     await update.message.reply_text(str(dt_now))
+
+
+async def randomnum(update, context):
+    """Будет выводить статистику"""
+    msg = update.message.text.split()
+    print(msg)
+    randnum = randint(int(msg[1]), int(msg[2]))
+    await update.message.reply_text(randnum)
 
 
 def main():
@@ -135,6 +143,7 @@ def main():
     application.add_handler(CommandHandler("time", printtime))
     application.add_handler(CommandHandler("mystand", mystand))
     application.add_handler(CommandHandler("stands", stands))
+    application.add_handler(CommandHandler("random", randomnum))
     # application.add_handler(CommandHandler("new_member", set_welcome))
     # Регистрируем обработчик в приложении.
     application.add_handler(text_handler)
