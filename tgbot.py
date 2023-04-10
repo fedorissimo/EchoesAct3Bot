@@ -116,8 +116,8 @@ async def mystand(update, context):
 
 async def stats(update, context):
     """Будет выводить статистику"""
-    dt_now = datetime.datetime.now().time()
-    await update.message.reply_text(str(dt_now))
+    pass
+    await update.message.reply_text('Скоро тут будет статистика')
 
 
 async def randomnum(update, context):
@@ -139,7 +139,7 @@ def main():
     # Создаём объект Application.
     # Вместо слова "TOKEN" надо разместить полученный от @BotFather токен
     application = Application.builder().token('5896234992:AAHwqWZCwgXLfb-pSilve6BEZoy5C0-9Ta0').build()
-
+    # Нет, я не забыл про ключ
     # Создаём обработчик сообщений типа filters.TEXT
     # из описанной выше асинхронной функции echo()
     # После регистрации обработчика в приложении
