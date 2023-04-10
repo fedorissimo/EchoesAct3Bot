@@ -33,12 +33,12 @@ async def echo(update, context):
     user = update.message.from_user.id
     cursor.execute('SELECT * FROM test WHERE user_id = (?)', (user, ))
     messagenum = cursor.fetchall()[0][-1]
-    print(messagenum)
     print(user)
     print(type(user))
     usertext = str(user)
+
     cursor.execute('UPDATE test SET messages = (?) WHERE user_id=(?)', (str(int(messagenum) + 1), usertext, ))
-    print(messagenum + 1)
+
     conn.commit()
     if 'эхо' in update.message.text:
         await update.message.reply_text('Я получил сообщение ' + update.message.text[4:])
