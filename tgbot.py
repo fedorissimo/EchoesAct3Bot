@@ -6,6 +6,7 @@ import telegram
 import csv
 import sqlite3
 from random import randint
+from youdotcom import Chat
 
 
 # Запускаем логгирование
@@ -127,6 +128,13 @@ async def randomnum(update, context):
     await update.message.reply_text(randnum)
 
 
+async def youchat(update, context):
+    """Чат-бот"""
+    msg = update.message.text[9:]
+    chat = Chat.send_message(message=msg, api_key="HYKVVNYMTOU6N0C7BABLBHD3GSYRBA7J5MZ")
+    await update.message.reply_text(chat['message'])
+
+
 def main():
     # Создаём объект Application.
     # Вместо слова "TOKEN" надо разместить полученный от @BotFather токен
@@ -149,6 +157,7 @@ def main():
     application.add_handler(CommandHandler("mystand", mystand))
     application.add_handler(CommandHandler("stands", stands))
     application.add_handler(CommandHandler("random", randomnum))
+    application.add_handler(CommandHandler("youchat", youchat))
     # application.add_handler(CommandHandler("new_member", set_welcome))
     # Регистрируем обработчик в приложении.
     application.add_handler(text_handler)
