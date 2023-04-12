@@ -38,6 +38,8 @@ async def echo(update, context):
     conn.commit()
     if 'эхо' in update.message.text:
         await update.message.reply_text('Я получил сообщение ' + update.message.text[4:])
+    if 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&ab_channel=RickAstley' in update.message.text:
+        await update.message.reply_text('Обнаружен рикролл')
 
 
 # Напишем соответствующие функции.
