@@ -32,14 +32,9 @@ async def echo(update, context):
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
     user = update.message.from_user.id
-    cursor.execute('SELECT * FROM test WHERE user_id = (?)', (user, ))
+    cursor.execute('SELECT * FROM test WHERE user_id = ?', (user, ))
     messagenum = cursor.fetchall()[0][-1]
-    print(user)
-    print(type(user))
-    usertext = str(user)
-
-    cursor.execute('UPDATE test SET messages = (?) WHERE user_id=(?)', (str(int(messagenum) + 1), usertext, ))
-
+    cursor.execute('UPDATE test SET messages = (?) WHERE user_id=?', (str(int(messagenum) + 1), user, ))
     conn.commit()
     if 'эхо' in update.message.text:
         await update.message.reply_text('Я получил сообщение ' + update.message.text[4:])
@@ -116,8 +111,12 @@ async def mystand(update, context):
 
 async def stats(update, context):
     """Будет выводить статистику"""
-    pass
-    await update.message.reply_text('Скоро тут будет статистика')
+    conn = sqlite3.connect('tgusers.db')
+    cursor = conn.cursor()
+    user = update.message.from_user.id
+    cursor.execute('SELECT * FROM test WHERE user_id = ?', (user, ))
+    messagenum = cursor.fetchall()[0][-1]
+    await update.message.reply_text(f'Кол-во отправленных сообщений: {messagenum}')
 
 
 async def randomnum(update, context):
@@ -158,6 +157,7 @@ def main():
     application.add_handler(CommandHandler("stands", stands))
     application.add_handler(CommandHandler("random", randomnum))
     application.add_handler(CommandHandler("youchat", youchat))
+    application.add_handler(CommandHandler("stats", stats))
     # application.add_handler(CommandHandler("new_member", set_welcome))
     # Регистрируем обработчик в приложении.
     application.add_handler(text_handler)
