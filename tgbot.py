@@ -1,7 +1,7 @@
 # Импортируем необходимые классы.
 import logging
 import datetime
-from telegram.ext import Application, MessageHandler, filters, CommandHandler, CallbackContext
+from telegram.ext import Application, MessageHandler, filters, CommandHandler, CallbackContext, ChatMemberHandler
 import telegram
 import csv
 import sqlite3
@@ -123,9 +123,7 @@ async def stats(update, context):
 
 async def randomnum(update, context):
     """Выводит рандомное число"""
-    msg = update.message.text.split()
-    print(msg)
-    randnum = randint(int(msg[1]), int(msg[2]))
+    randnum = randint(int(context.args[0]), int(context.args[1]))
     await update.message.reply_text(randnum)
 
 
@@ -136,10 +134,23 @@ async def youchat(update, context):
     await update.message.reply_text(chat['message'])
 
 
+async def newmember(update, context):
+    """Чат-бот"""
+    await update.message.reply_text('Прив')
+
+
+async def greet_chat_members(update, context):
+    """Не работает("""
+    print('test')
+    await update.effective_chat.send_message(f'hi')
+
+
 def main():
     # Создаём объект Application.
     # Вместо слова "TOKEN" надо разместить полученный от @BotFather токен
     application = Application.builder().token('5896234992:AAHwqWZCwgXLfb-pSilve6BEZoy5C0-9Ta0').build()
+
+
     # Нет, я не забыл про ключ
     # Создаём обработчик сообщений типа filters.TEXT
     # из описанной выше асинхронной функции echo()
@@ -151,6 +162,7 @@ def main():
     # регистрацией обработчика текстовых сообщений.
     # Первым параметром конструктора CommandHandler я
     # вляется название команды.
+    application.add_handler(ChatMemberHandler(greet_chat_members, ChatMemberHandler.CHAT_MEMBER))
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("date", printdate))
