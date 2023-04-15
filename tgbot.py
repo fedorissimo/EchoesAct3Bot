@@ -9,12 +9,11 @@ from random import randint
 from youdotcom import Chat
 
 
-# Запускаем логгирование
-# logging.basicConfig(
-#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
-# )
-#
-# logger = logging.getLogger(__name__)
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
+)
+
+logger = logging.getLogger(__name__)
 dt_now = datetime.datetime.now()
 
 name = 1
@@ -91,7 +90,8 @@ async def stands(update, context):
 async def mystand(update, context):
     """Позволяет выбрать стенд"""
     msg = update.message.text
-    newstand = msg[9:]
+    newstand = context.args
+    print(newstand)
     # with open('stands.csv', 'r') as f:
     #     csv_read = csv.reader(f, delimiter=',', lineterminator="\n")
     #     if newstand not in csv_read and update.message.from_user.id not in csv_read:
@@ -102,17 +102,17 @@ async def mystand(update, context):
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
     cursor.execute('INSERT INTO test (user_id, user_name, stand) VALUES (?, ?, ?)',
-                   (update.message.from_user.id, update.message.from_user.first_name, newstand))
+                   (update.message.from_user.id, update.message.from_user.first_name, newstand[0]))
     conn.commit()
     cursor.execute('SELECT * FROM test')
     users = cursor.fetchall()
     print(users)
     print(msg)
-    await update.message.reply_text(f'Твой стенд - {msg[9:]}')
+    await update.message.reply_text(f'Твой стенд - {context.args[0]}')
 
 
 async def stats(update, context):
-    """Будет выводить статистику"""
+    """Выводит статистику"""
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
     user = update.message.from_user.id
@@ -122,7 +122,7 @@ async def stats(update, context):
 
 
 async def randomnum(update, context):
-    """Будет выводить статистику"""
+    """Выводит рандомное число"""
     msg = update.message.text.split()
     print(msg)
     randnum = randint(int(msg[1]), int(msg[2]))
@@ -131,7 +131,7 @@ async def randomnum(update, context):
 
 async def youchat(update, context):
     """Чат-бот"""
-    msg = update.message.text[9:]
+    msg = context.args
     chat = Chat.send_message(message=msg, api_key="HYKVVNYMTOU6N0C7BABLBHD3GSYRBA7J5MZ")
     await update.message.reply_text(chat['message'])
 
@@ -159,6 +159,7 @@ def main():
     application.add_handler(CommandHandler("stands", stands))
     application.add_handler(CommandHandler("random", randomnum))
     application.add_handler(CommandHandler("youchat", youchat))
+    application.add_handler(CommandHandler("yc", youchat))
     application.add_handler(CommandHandler("stats", stats))
     # application.add_handler(CommandHandler("new_member", set_welcome))
     # Регистрируем обработчик в приложении.
