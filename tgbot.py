@@ -1,25 +1,24 @@
 # Импортируем необходимые классы.
 import logging
 import datetime
-from telegram.ext import Application, MessageHandler, filters, CommandHandler, CallbackContext, ChatMemberHandler
+from telegram.ext import Application, MessageHandler, filters, CommandHandler, CallbackContext, ChatMemberHandler,\
+    Updater
 import telegram
 import csv
 import sqlite3
 from random import randint
 from youdotcom import Chat
-
+# Импорт библиотек
 
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
 )
-
-logger = logging.getLogger(__name__)
-dt_now = datetime.datetime.now()
-
-name = 1
-stand = 2
+# Логирование
 
 
+RICKROLLS = ['https://www.youtube.com/watch?v=dQw4w9WgXcQ&pp=ygUO0YDQuNC60YDQvtC70Ls%3D',
+             'https://www.youtube.com/watch?v=dQw4w9WgXcQ&ab_channel=RickAstley']
+# Константы
 # Определяем функцию-обработчик сообщений.
 # У неё два параметра, updater, принявший сообщение и контекст - дополнительная информация о сообщении.
 async def echo(update, context):
@@ -28,6 +27,15 @@ async def echo(update, context):
     # У message есть поле text, содержащее текст полученного сообщения,
     # а также метод reply_text(str),
     # отсылающий ответ пользователю, от которого получено сообщение.
+    # print(help_command(update.message.new_chat_members))
+    # Тут должно быть определение новых пользователей, но оно не работает
+    if update.message.new_chat_members:
+        print('aboba')
+        for new_member in update.message.new_chat_members:
+            # Bot was added to a group chat
+            # Another user joined the chat
+            await update.message.reply_text('Абоба')
+    # Работа с базой данных
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
     user = update.message.from_user.id
@@ -35,9 +43,11 @@ async def echo(update, context):
     messagenum = cursor.fetchall()[0][-1]
     cursor.execute('UPDATE test SET messages = (?) WHERE user_id=?', (str(int(messagenum) + 1), user, ))
     conn.commit()
+    # Просто функция эхо-бота
     if 'эхо' in update.message.text:
         await update.message.reply_text('Я получил сообщение ' + update.message.text[4:])
-    if 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&ab_channel=RickAstley' in update.message.text:
+    # Never Gonna Give You Up
+    if update.message.text in RICKROLLS:
         await update.message.reply_text('Обнаружен рикролл')
 
 
@@ -45,43 +55,43 @@ async def echo(update, context):
 # Их сигнатура и поведение аналогичны обработчикам текстовых сообщений.
 async def start(update, context):
     """Отправляет сообщение когда получена команда /start"""
-    user = update.effective_user
     await update.message.reply_html(
-        rf"Оно работает!",
+        rf'Если вы это читаете, то бот даже работает.'
+        rf'Основные команды:'
+        rf'/date - Вывести дату'
+        rf'/time - Вывести время'
+        rf'/mystand - Выбрать стенд (нужно ввести название стенда)'
+        rf'/stands - Список стендов'
+        rf'/random - Выводит случайное число (нужно ввести два числа через пробел)'
+        rf'/youchat/yc - Запрос для нейровсети, аналога ChatGPT'
+        rf'/stats - Выводит статистику сообщений'
+        rf'/help - Выводит информацию о боте',
     )
 
 
-async def help_command(update, context):
-    """Отправляет сообщение когда получена команда /help"""
-    await update.message.reply_text("Стенд не может помогать будучи телеграм-ботом...")
-
-
 async def printdate(update, context):
-    """Отправляет сообщение когда получена команда /date"""
+    """Отправляет дату, когда получена команда /date"""
     dt_today = datetime.date.today()
     await update.message.reply_text(str(dt_today))
 
 
 async def printtime(update, context):
-    """Отправляет сообщение когда получена команда /time"""
+    """Отправляет время, когда получена команда /time"""
     dt_now = datetime.datetime.now().time()
     await update.message.reply_text(str(dt_now))
 
 
 async def stands(update, context):
     """Выводит список пользователей и их стендов"""
-    # standlist = ''
-    # with open('stands.csv', 'r') as f:
-    #     csv_read = csv.reader(f, delimiter=',', lineterminator="\n")
-    #     for i in csv_read:
-    #         standlist += ' - '.join(i[1:3])
-    #         standlist += '\n'
+    # Стенды - способности пользователя (из JoJo)
+    # Тут работа с БД
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM test')
     users = cursor.fetchall()
     print(users)
     usersprint = ''
+    # Показ всех стендов из БД
     for i in users:
         usersprint += f'{i}\n'
     await update.message.reply_text(usersprint)
@@ -89,30 +99,21 @@ async def stands(update, context):
 
 async def mystand(update, context):
     """Позволяет выбрать стенд"""
-    msg = update.message.text
+    # Снова БД
     newstand = context.args
-    print(newstand)
-    # with open('stands.csv', 'r') as f:
-    #     csv_read = csv.reader(f, delimiter=',', lineterminator="\n")
-    #     if newstand not in csv_read and update.message.from_user.id not in csv_read:
-    #         with open('stands.csv', 'a') as fw:
-    #             csv_write = csv.writer(fw, delimiter=',', lineterminator="\n")
-    #
-    #             csv_write.writerow([update.message.from_user.id, update.message.from_user.first_name, newstand])
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
+    # Тут получение id, имени и стенда
     cursor.execute('INSERT INTO test (user_id, user_name, stand) VALUES (?, ?, ?)',
                    (update.message.from_user.id, update.message.from_user.first_name, newstand[0]))
     conn.commit()
     cursor.execute('SELECT * FROM test')
-    users = cursor.fetchall()
-    print(users)
-    print(msg)
     await update.message.reply_text(f'Твой стенд - {context.args[0]}')
 
 
 async def stats(update, context):
     """Выводит статистику"""
+    # вывод кол-ва отправленных пользователем сообщений
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
     user = update.message.from_user.id
@@ -123,12 +124,14 @@ async def stats(update, context):
 
 async def randomnum(update, context):
     """Выводит рандомное число"""
+    # Тут и так понятно
     randnum = randint(int(context.args[0]), int(context.args[1]))
     await update.message.reply_text(randnum)
 
 
 async def youchat(update, context):
     """Чат-бот"""
+    # Запрос нейросети и вывод ответа в чат
     msg = context.args
     chat = Chat.send_message(message=msg, api_key="HYKVVNYMTOU6N0C7BABLBHD3GSYRBA7J5MZ")
     await update.message.reply_text(chat['message'])
@@ -136,6 +139,7 @@ async def youchat(update, context):
 
 async def newmember(update, context):
     """Чат-бот"""
+    # Не работает
     await update.message.reply_text('Прив')
 
 
@@ -147,9 +151,13 @@ async def greet_chat_members(update, context):
 
 def main():
     # Создаём объект Application.
-    # Вместо слова "TOKEN" надо разместить полученный от @BotFather токен
-    application = Application.builder().token('5896234992:AAHwqWZCwgXLfb-pSilve6BEZoy5C0-9Ta0').build()
-
+    # Проверка токена из файла
+    with open('token.txt', 'r') as tokenstr:
+        tokenread = tokenstr.readline()
+        if tokenread != 'TOKEN' and tokenread != '':
+            application = Application.builder().token(tokenread).build()
+        else:
+            logging.fatal('Введите свой токен в файл token.txt')
 
     # Нет, я не забыл про ключ
     # Создаём обработчик сообщений типа filters.TEXT
@@ -158,13 +166,14 @@ def main():
     # эта асинхронная функция будет вызываться при получении сообщения
     # с типом "текст", т. е. текстовых сообщений.
     text_handler = MessageHandler(filters.TEXT, echo)
+
     # Зарегистрируем их в приложении перед
     # регистрацией обработчика текстовых сообщений.
     # Первым параметром конструктора CommandHandler я
     # вляется название команды.
     application.add_handler(ChatMemberHandler(greet_chat_members, ChatMemberHandler.CHAT_MEMBER))
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
+    # application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("date", printdate))
     application.add_handler(CommandHandler("time", printtime))
     application.add_handler(CommandHandler("mystand", mystand))
