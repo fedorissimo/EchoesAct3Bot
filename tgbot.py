@@ -39,9 +39,11 @@ async def echo(update, context):
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
     user = update.message.from_user.id
-    cursor.execute('SELECT * FROM test WHERE user_id = ?', (user, ))
+    cursor.execute('SELECT * FROM everything WHERE user_id = ?', (user, ))
     messagenum = cursor.fetchall()[0][-1]
-    cursor.execute('UPDATE test SET messages = (?) WHERE user_id=?', (str(int(messagenum) + 1), user, ))
+    if messagenum is None:
+        messagenum = '0'
+    cursor.execute('UPDATE everything SET messages = (?) WHERE user_id=?', (str(int(messagenum) + 1), user, ))
     conn.commit()
     # Просто функция эхо-бота
     if 'эхо' in update.message.text:
@@ -87,7 +89,7 @@ async def stands(update, context):
     # Тут работа с БД
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM test')
+    cursor.execute('SELECT * FROM everything')
     users = cursor.fetchall()
     print(users)
     usersprint = ''
@@ -104,10 +106,10 @@ async def mystand(update, context):
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
     # Тут получение id, имени и стенда
-    cursor.execute('INSERT INTO test (user_id, user_name, stand) VALUES (?, ?, ?)',
+    cursor.execute('INSERT INTO everything (user_id, user_name, stand) VALUES (?, ?, ?)',
                    (update.message.from_user.id, update.message.from_user.first_name, newstand[0]))
     conn.commit()
-    cursor.execute('SELECT * FROM test')
+    cursor.execute('SELECT * FROM everything')
     await update.message.reply_text(f'Твой стенд - {context.args[0]}')
 
 
@@ -117,7 +119,7 @@ async def stats(update, context):
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
     user = update.message.from_user.id
-    cursor.execute('SELECT * FROM test WHERE user_id = ?', (user, ))
+    cursor.execute('SELECT * FROM everything WHERE user_id = ?', (user, ))
     messagenum = cursor.fetchall()[0][-1]
     await update.message.reply_text(f'Кол-во отправленных сообщений: {messagenum}')
 
