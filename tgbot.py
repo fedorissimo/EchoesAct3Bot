@@ -33,6 +33,31 @@ HELPLINE = ('Основные команды:\n'
 # Константы
 # Определяем функцию-обработчик сообщений.
 # У неё два параметра, updater, принявший сообщение и контекст - дополнительная информация о сообщении.
+def make_table(chat_id):
+    conn = sqlite3.connect('tgusers.db')
+    cursor = conn.cursor()
+    print('test')
+    print(chat_id)
+    curstr = f'''CREATE TABLE {str(chat_id)[1:]}(product VARCHAR(20) PRIMARY KEY, count INTEGER, price INTEGER)'''
+    cursor.execute(curstr)
+    conn.commit()
+
+
+def check_stand(user, wherefrom):
+    conn = sqlite3.connect('tgusers.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT stand FROM everything WHERE user_id = ?', (user,))
+    isstand = cursor.fetchone()
+    if isstand is not None and isstand[0] != '':
+        return 1
+    else:
+        if wherefrom == 'start':
+            cursor.execute('UPDATE everything SET stand = (?) WHERE user_id=?', ('NO_STAND', user,))
+            conn.commit()
+        elif wherefrom == 'mystand':
+            return 2
+
+
 async def echo(update, context):
     # У объекта класса Updater есть поле message,
     # являющееся объектом сообщения.
@@ -71,12 +96,14 @@ async def start(update, context):
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
     user = update.message.from_user.id
+    chat_id = update.message.chat_id
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    tables = cursor.fetchall()
+    # if chat_id != user and chat_id not in tables:
+    #     make_table(chat_id)
     cursor.execute('SELECT stand FROM everything WHERE user_id = ?', (user,))
     isstand = cursor.fetchone()
-    if isstand is not None:
-        pass
-    else:
-        cursor.execute('INSERT INTO everything (stand) WHERE user_id = ? VALUES ("NO_STAND")')
+    check_stand(user, 'start')
     await update.message.reply_text('Если вы это читаете, то бот даже работает)\n' + HELPLINE)
 
 
@@ -112,14 +139,21 @@ async def mystand(update, context):
     """Позволяет выбрать стенд"""
     # Снова БД
     newstand = context.args
+    user = update.message.from_user.id
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
-    # Тут получение id, имени и стенда
-    cursor.execute('INSERT INTO everything (user_id, user_name, stand) VALUES (?, ?, ?)',
-                   (update.message.from_user.id, update.message.from_user.first_name, newstand[0]))
-    conn.commit()
-    cursor.execute('SELECT * FROM everything')
-    await update.message.reply_text(f'Твой стенд - {context.args[0]}')
+    cursor.execute('SELECT * FROM everything WHERE user_id = ?', (user,))
+    checker = check_stand(user, 'mystand')
+    if checker == 1:
+        await update.message.reply_text('Нельзя иметь более одного стенда')
+    else:
+        # Тут получение id, имени и стенда
+        cursor.execute('INSERT INTO everything (user_id, user_name, stand) VALUES (?, ?, ?)',
+                       (user, update.message.from_user.first_name, newstand[0]))
+        conn.commit()
+        cursor.execute('SELECT * FROM everything')
+        await update.message.reply_text(f'Твой стенд - {" ".join(context.args)}\n')
+        await update.message.reply_text('Вы описать свой стенд командой /st_desc')
 
 
 async def stats(update, context):
@@ -164,6 +198,17 @@ async def help_command(update, context):
     await update.message.reply_text(HELPLINE)
 
 
+async def st_desc(update, context):
+    """Позволяет описать свой стенд"""
+    desc = context.args
+    conn = sqlite3.connect('tgusers.db')
+    cursor = conn.cursor()
+    user = update.message.from_user.id
+    cursor.execute('UPDATE everything SET stand_desc = (?) WHERE user_id=?', (' '.join(desc), user,))
+    conn.commit()
+    await update.message.reply_text('Описание применено')
+
+
 def main():
     # Создаём объект Application.
     # Проверка токена из файла
@@ -196,6 +241,7 @@ def main():
     application.add_handler(CommandHandler("youchat", youchat))
     application.add_handler(CommandHandler("yc", youchat))
     application.add_handler(CommandHandler("stats", stats))
+    application.add_handler(CommandHandler("stand_desc", st_desc))
     # application.add_handler(CommandHandler("new_member", set_welcome))
     # Регистрируем обработчик в приложении.
     application.add_handler(text_handler)
