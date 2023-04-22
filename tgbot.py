@@ -3,13 +3,16 @@ import logging
 import datetime
 from telegram.ext import Application, MessageHandler, filters, CommandHandler, CallbackContext, ChatMemberHandler, \
     Updater
-import telegram
+from telegram import Chat, Bot
 import csv
 import sqlite3
 from random import randint
 from youdotcom import Chat
 
 # Импорт библиотек
+BOT_TOKEN = ""
+badwords = ["дебил", "лох", "дура", "лохушка"]
+bot = Bot(BOT_TOKEN)
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
@@ -70,7 +73,18 @@ async def echo(update, context):
         for new_member in update.message.new_chat_members:
             # Bot was added to a group chat
             # Another user joined the chat
-            await update.message.reply_text('Абоба')
+            await update.message.reply_text('Приветствую!')
+    try:
+        for i in badwords:
+            if i in update.message.text and update.message.chat_id != update.message.from_user.id:
+                await bot.ban_chat_member(update.message.chat_id, update.message.from_user.id)
+                break
+            elif i in update.message.text and update.message.chat_id == update.message.from_user.id:
+                    await update.message.reply_text('Не говорите мне плохие слова!')
+                    break
+    except Exception as e:
+        await update.message.reply_text(
+            'Дорогой владелец/админ, подумайте какой пример вы показываете, говоря плохие слова!')
     # Работа с базой данных
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
