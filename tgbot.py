@@ -3,8 +3,7 @@ import logging
 import datetime
 from telegram.ext import Application, MessageHandler, filters, CommandHandler, CallbackContext, ChatMemberHandler, \
     Updater
-import telegram
-import csv
+from telegram import Chat, Bot
 import sqlite3
 from random import randint
 from youdotcom import Chat
@@ -29,18 +28,18 @@ HELPLINE = ('Основные команды:\n'
             '/stats - Выводит статистику сообщений\n'
             '/help - Выводит информацию о боте')
 
-
+with open('token.txt', 'r') as tokenstr:
+    tokenread = tokenstr.readline()
+    if tokenread != 'TOKEN' and tokenread != '':
+        BOT_TOKEN = tokenread
+    else:
+        logging.fatal('Введите свой токен в файл token.txt')
+BADWORDS = ["дебил", "лох", "дура", "лохушка"]
 # Константы
-# Определяем функцию-обработчик сообщений.
-# У неё два параметра, updater, принявший сообщение и контекст - дополнительная информация о сообщении.
-def make_table(chat_id):
-    conn = sqlite3.connect('tgusers.db')
-    cursor = conn.cursor()
-    curstr = f'''CREATE TABLE {str(chat_id)[1:]}(product VARCHAR(20) PRIMARY KEY, count INTEGER, price INTEGER)'''
-    cursor.execute(curstr)
-    conn.commit()
+bot = Bot(BOT_TOKEN)
 
 
+# Функция для проверки наличия стенда
 def check_stand(user, wherefrom):
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
@@ -57,25 +56,29 @@ def check_stand(user, wherefrom):
 
 
 async def echo(update, context):
-    # У объекта класса Updater есть поле message,
-    # являющееся объектом сообщения.
-    # У message есть поле text, содержащее текст полученного сообщения,
-    # а также метод reply_text(str),
-    # отсылающий ответ пользователю, от которого получено сообщение.
-    # print(help_command(update.message.new_chat_members))
-    # Тут должно быть определение новых пользователей, но оно не работает
+    # Приветствие новых пользователей
     if update.message.new_chat_members:
         for new_member in update.message.new_chat_members:
-            # Bot was added to a group chat
-            # Another user joined the chat
-            await update.message.reply_text('Абоба')
+            await update.message.reply_text('Приветствую!')
+    # Часть Егора (обнаружение ругательств)
+    try:
+        for i in BADWORDS:
+            if i in update.message.text and update.message.chat_id != update.message.from_user.id:
+                await bot.ban_chat_member(update.message.chat_id, update.message.from_user.id)
+                break
+            elif i in update.message.text and update.message.chat_id == update.message.from_user.id:
+                await update.message.reply_text('Не говорите мне плохие слова!')
+                break
+    except Exception as e:
+        await update.message.reply_text(
+            'Дорогой владелец/админ, подумайте какой пример вы показываете, говоря плохие слова!')
     # Работа с базой данных
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
     user = update.message.from_user.id
     cursor.execute('SELECT messages FROM everything WHERE user_id = ?', (str(user),))
-    # print(cursor.fetchall()[0][-1])
     messagenum = cursor.fetchone()
+    # Добавление нового пользователя в БД, проверка кол-ва сообщений
     if not messagenum:
         messagenum = '0'
         cursor.execute('INSERT INTO everything (user_id, user_name, messages) VALUES (?, ?, ?)',
@@ -88,7 +91,7 @@ async def echo(update, context):
     # Просто функция эхо-бота
     if 'эхо' in update.message.text:
         await update.message.reply_text('Я получил сообщение ' + update.message.text[4:])
-    # Never Gonna Give You Up
+    # Обнаружение рикролла
     if update.message.text in RICKROLLS:
         await update.message.reply_text('Обнаружен рикролл')
 
@@ -100,13 +103,8 @@ async def start(update, context):
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
     user = update.message.from_user.id
-    chat_id = update.message.chat_id
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-    tables = cursor.fetchall()
-    # if chat_id != user and chat_id not in tables:
-    #     make_table(chat_id)
     cursor.execute('SELECT stand FROM everything WHERE user_id = ?', (str(user),))
-    isstand = cursor.fetchone()
     check_stand(user, 'start')
     await update.message.reply_text('Если вы это читаете, то бот даже работает)\n' + HELPLINE)
 
@@ -147,6 +145,7 @@ async def mystand(update, context):
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM everything WHERE user_id = ?', (str(user),))
     checker = check_stand(user, 'mystand')
+    # Проверка, есть ли у пользователя стенд
     if checker == 1:
         await update.message.reply_text('Нельзя иметь более одного стенда')
     else:
@@ -160,7 +159,7 @@ async def mystand(update, context):
 
 async def stats(update, context):
     """Выводит статистику"""
-    # вывод кол-ва отправленных пользователем сообщений
+    # Вывод кол-ва отправленных пользователем сообщений
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
     user = update.message.from_user.id
@@ -171,7 +170,6 @@ async def stats(update, context):
 
 async def randomnum(update, context):
     """Выводит рандомное число"""
-    # Тут и так понятно
     randnum = randint(int(context.args[0]), int(context.args[1]))
     await update.message.reply_text(randnum)
 
@@ -184,17 +182,6 @@ async def youchat(update, context):
     await update.message.reply_text(chat['message'])
 
 
-async def newmember(update, context):
-    """Чат-бот"""
-    # Не работает
-    await update.message.reply_text('Прив')
-
-
-async def greet_chat_members(update, context):
-    """Уведомляет об изменении числа участников группы"""
-    await update.effective_chat.send_message(f'Изменилось число участников группы')
-
-
 async def help_command(update, context):
     """Выводит список команд"""
     await update.message.reply_text(HELPLINE)
@@ -205,6 +192,7 @@ async def st_desc(update, context):
     desc = context.args
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
+    # Добавление описания в БД
     user = update.message.from_user.id
     cursor.execute('UPDATE everything SET stand_desc = (?) WHERE user_id=?', (' '.join(desc), str(user),))
     conn.commit()
@@ -213,26 +201,11 @@ async def st_desc(update, context):
 
 def main():
     # Создаём объект Application.
-    # Проверка токена из файла
-    with open('token.txt', 'r') as tokenstr:
-        tokenread = tokenstr.readline()
-        if tokenread != 'TOKEN' and tokenread != '':
-            application = Application.builder().token(tokenread).build()
-        else:
-            logging.fatal('Введите свой токен в файл token.txt')
+    application = Application.builder().token(BOT_TOKEN).build()
 
-    # Нет, я не забыл про ключ
-    # Создаём обработчик сообщений типа filters.TEXT
-    # из описанной выше асинхронной функции echo()
-    # После регистрации обработчика в приложении
-    # эта асинхронная функция будет вызываться при получении сообщения
-    # с типом "текст", т. е. текстовых сообщений.
     text_handler = MessageHandler(filters.TEXT, echo)
 
-    # Зарегистрируем их в приложении перед
-    # регистрацией обработчика текстовых сообщений.
-    # Первым параметром конструктора CommandHandler я вляется название команды.
-    application.add_handler(ChatMemberHandler(greet_chat_members, ChatMemberHandler.CHAT_MEMBER))
+    # Команды
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("date", printdate))
@@ -244,11 +217,10 @@ def main():
     application.add_handler(CommandHandler("yc", youchat))
     application.add_handler(CommandHandler("stats", stats))
     application.add_handler(CommandHandler("stand_desc", st_desc))
-    # application.add_handler(CommandHandler("new_member", set_welcome))
     # Регистрируем обработчик в приложении.
     application.add_handler(text_handler)
 
-    # Запускаем приложение.
+    # Запуск приложения
     application.run_polling()
 
 
