@@ -155,7 +155,7 @@ async def mystand(update, context):
         conn.commit()
         cursor.execute('SELECT * FROM everything')
         await update.message.reply_text(f'Твой стенд - {" ".join(context.args)}\n')
-        await update.message.reply_text('Вы описать свой стенд командой /stand_desc')
+        await update.message.reply_text('Вы можете описать свой стенд командой /stand_desc')
 
 
 async def stats(update, context):
