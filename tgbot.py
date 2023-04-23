@@ -3,16 +3,13 @@ import logging
 import datetime
 from telegram.ext import Application, MessageHandler, filters, CommandHandler, CallbackContext, ChatMemberHandler, \
     Updater
-from telegram import Chat, Bot
+import telegram
 import csv
 import sqlite3
 from random import randint
 from youdotcom import Chat
 
 # Импорт библиотек
-BOT_TOKEN = ""
-badwords = ["дебил", "лох", "дура", "лохушка"]
-bot = Bot(BOT_TOKEN)
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
@@ -28,7 +25,7 @@ HELPLINE = ('Основные команды:\n'
             '/mystand - Выбрать стенд (нужно ввести название стенда)\n'
             '/stands - Список стендов\n'
             '/random - Выводит случайное число (нужно ввести два числа через пробел)\n'
-            '/youchat;/yc - Запрос для нейровсети, аналога ChatGPT\n'
+            '/youchat;/yc - Запрос для нейросети, аналога ChatGPT\n'
             '/stats - Выводит статистику сообщений\n'
             '/help - Выводит информацию о боте')
 
@@ -39,8 +36,6 @@ HELPLINE = ('Основные команды:\n'
 def make_table(chat_id):
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
-    print('test')
-    print(chat_id)
     curstr = f'''CREATE TABLE {str(chat_id)[1:]}(product VARCHAR(20) PRIMARY KEY, count INTEGER, price INTEGER)'''
     cursor.execute(curstr)
     conn.commit()
@@ -49,13 +44,13 @@ def make_table(chat_id):
 def check_stand(user, wherefrom):
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT stand FROM everything WHERE user_id = ?', (user,))
+    cursor.execute('SELECT stand FROM everything WHERE user_id = ?', (str(user),))
     isstand = cursor.fetchone()
-    if isstand is not None and isstand[0] != '':
+    if isstand is not None and isstand[0] != '' and isstand[0] is not None:
         return 1
     else:
         if wherefrom == 'start':
-            cursor.execute('UPDATE everything SET stand = (?) WHERE user_id=?', ('NO_STAND', user,))
+            cursor.execute('UPDATE everything SET stand = (?) WHERE user_id=?', ('NO_STAND', str(user),))
             conn.commit()
         elif wherefrom == 'mystand':
             return 2
@@ -73,27 +68,22 @@ async def echo(update, context):
         for new_member in update.message.new_chat_members:
             # Bot was added to a group chat
             # Another user joined the chat
-            await update.message.reply_text('Приветствую!')
-    try:
-        for i in badwords:
-            if i in update.message.text and update.message.chat_id != update.message.from_user.id:
-                await bot.ban_chat_member(update.message.chat_id, update.message.from_user.id)
-                break
-            elif i in update.message.text and update.message.chat_id == update.message.from_user.id:
-                    await update.message.reply_text('Не говорите мне плохие слова!')
-                    break
-    except Exception as e:
-        await update.message.reply_text(
-            'Дорогой владелец/админ, подумайте какой пример вы показываете, говоря плохие слова!')
+            await update.message.reply_text('Абоба')
     # Работа с базой данных
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
     user = update.message.from_user.id
-    cursor.execute('SELECT * FROM everything WHERE user_id = ?', (user,))
-    messagenum = cursor.fetchall()[0][-1]
-    if messagenum is None:
+    cursor.execute('SELECT messages FROM everything WHERE user_id = ?', (str(user),))
+    # print(cursor.fetchall()[0][-1])
+    messagenum = cursor.fetchone()
+    if not messagenum:
         messagenum = '0'
-    cursor.execute('UPDATE everything SET messages = (?) WHERE user_id=?', (str(int(messagenum) + 1), user,))
+        cursor.execute('INSERT INTO everything (user_id, user_name, messages) VALUES (?, ?, ?)',
+                       (str(user), update.message.from_user.first_name, messagenum))
+        await update.message.reply_text('Привет!')
+    else:
+        cursor.execute('UPDATE everything SET messages = (?) WHERE user_id=?',
+                       (str(int(messagenum[0]) + 1), str(user),))
     conn.commit()
     # Просто функция эхо-бота
     if 'эхо' in update.message.text:
@@ -115,7 +105,7 @@ async def start(update, context):
     tables = cursor.fetchall()
     # if chat_id != user and chat_id not in tables:
     #     make_table(chat_id)
-    cursor.execute('SELECT stand FROM everything WHERE user_id = ?', (user,))
+    cursor.execute('SELECT stand FROM everything WHERE user_id = ?', (str(user),))
     isstand = cursor.fetchone()
     check_stand(user, 'start')
     await update.message.reply_text('Если вы это читаете, то бот даже работает)\n' + HELPLINE)
@@ -141,7 +131,6 @@ async def stands(update, context):
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM everything')
     users = cursor.fetchall()
-    print(users)
     usersprint = ''
     # Показ всех стендов из БД
     for i in users:
@@ -156,18 +145,17 @@ async def mystand(update, context):
     user = update.message.from_user.id
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM everything WHERE user_id = ?', (user,))
+    cursor.execute('SELECT * FROM everything WHERE user_id = ?', (str(user),))
     checker = check_stand(user, 'mystand')
     if checker == 1:
         await update.message.reply_text('Нельзя иметь более одного стенда')
     else:
         # Тут получение id, имени и стенда
-        cursor.execute('INSERT INTO everything (user_id, user_name, stand) VALUES (?, ?, ?)',
-                       (user, update.message.from_user.first_name, newstand[0]))
+        cursor.execute('UPDATE everything SET stand = (?) WHERE user_id=?', (' '.join(newstand), str(user),))
         conn.commit()
         cursor.execute('SELECT * FROM everything')
         await update.message.reply_text(f'Твой стенд - {" ".join(context.args)}\n')
-        await update.message.reply_text('Вы описать свой стенд командой /st_desc')
+        await update.message.reply_text('Вы описать свой стенд командой /stand_desc')
 
 
 async def stats(update, context):
@@ -176,7 +164,7 @@ async def stats(update, context):
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
     user = update.message.from_user.id
-    cursor.execute('SELECT * FROM everything WHERE user_id = ?', (user,))
+    cursor.execute('SELECT * FROM everything WHERE user_id = ?', (str(user),))
     messagenum = cursor.fetchall()[0][-1]
     await update.message.reply_text(f'Кол-во отправленных сообщений: {messagenum}')
 
@@ -218,7 +206,7 @@ async def st_desc(update, context):
     conn = sqlite3.connect('tgusers.db')
     cursor = conn.cursor()
     user = update.message.from_user.id
-    cursor.execute('UPDATE everything SET stand_desc = (?) WHERE user_id=?', (' '.join(desc), user,))
+    cursor.execute('UPDATE everything SET stand_desc = (?) WHERE user_id=?', (' '.join(desc), str(user),))
     conn.commit()
     await update.message.reply_text('Описание применено')
 
